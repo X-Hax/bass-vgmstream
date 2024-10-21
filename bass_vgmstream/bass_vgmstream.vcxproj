@@ -140,7 +140,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>bass.lib;libspeex/libspeex.lib;libvorbis.lib;avcodec.lib;avformat.lib;avutil.lib;libmpg123-0.lib;libg719_decode.lib;libcelt-0061.lib;libcelt-0110.lib;libatrac9.lib;libvgmstream.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bass.lib;libspeex-1.lib;libvorbis.lib;avcodec.lib;avformat.lib;avutil.lib;libmpg123-0.lib;libg719_decode.lib;libcelt-0061.lib;libcelt-0110.lib;libatrac9.lib;libvgmstream.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers />
     </Link>
     <PostBuildEvent>

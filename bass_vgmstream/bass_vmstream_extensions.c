@@ -3,12 +3,60 @@
 #include <vgmstream.h>
 #include <stdlib.h>
 
+// Stuff removed from vgmstream
+void put_8bit(uint8_t* buf, int8_t i) {
+	buf[0] = i;
+}
+
+void put_16bitLE(uint8_t* buf, int16_t i) {
+	buf[0] = (i & 0xFF);
+	buf[1] = i >> 8;
+}
+
+void put_32bitLE(uint8_t* buf, int32_t i) {
+	buf[0] = (uint8_t)(i & 0xFF);
+	buf[1] = (uint8_t)((i >> 8) & 0xFF);
+	buf[2] = (uint8_t)((i >> 16) & 0xFF);
+	buf[3] = (uint8_t)((i >> 24) & 0xFF);
+}
+
+void put_16bitBE(uint8_t* buf, int16_t i) {
+	buf[0] = i >> 8;
+	buf[1] = (i & 0xFF);
+}
+
+void put_32bitBE(uint8_t* buf, int32_t i) {
+	buf[0] = (uint8_t)((i >> 24) & 0xFF);
+	buf[1] = (uint8_t)((i >> 16) & 0xFF);
+	buf[2] = (uint8_t)((i >> 8) & 0xFF);
+	buf[3] = (uint8_t)(i & 0xFF);
+}
+
+void swap_samples_le(sample_t* buf, int count) {
+	/* Windows can't be BE... I think */
+#if !defined(_WIN32)
+#if !defined(__BYTE_ORDER__) || __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+	int i;
+	for (i = 0; i < count; i++) {
+		/* 16b sample in memory: aabb where aa=MSB, bb=LSB */
+		uint8_t b0 = buf[i] & 0xff;
+		uint8_t b1 = buf[i] >> 8;
+		uint8_t* p = (uint8_t*)&(buf[i]);
+		/* 16b sample in buffer: bbaa where bb=LSB, aa=MSB */
+		p[0] = b0;
+		p[1] = b1;
+		/* when endianness is LE, buffer has bbaa already so this function can be skipped */
+	}
+#endif
+#endif
+}
+
 // WAV header function from vgmstream r1040 modified to store loop size
 void make_wav_header(uint8_t* buf, int32_t sample_count, int32_t sample_rate, int channels, int loop) 
 {
 	size_t bytecount;
 
-	bytecount = sample_count * channels * sizeof(sample);
+	bytecount = sample_count * channels * sizeof(sample_t);
 
 	/* RIFF header */
 	memcpy(buf + 0, "RIFF", 4);
@@ -35,13 +83,13 @@ void make_wav_header(uint8_t* buf, int32_t sample_count, int32_t sample_rate, in
 	put_32bitLE(buf + 0x18, sample_rate);
 
 	/* bytes per second */
-	put_32bitLE(buf + 0x1c, sample_rate * channels * sizeof(sample));
+	put_32bitLE(buf + 0x1c, sample_rate * channels * sizeof(sample_t));
 
 	/* block align */
-	put_16bitLE(buf + 0x20, (int16_t)(channels * sizeof(sample)));
+	put_16bitLE(buf + 0x20, (int16_t)(channels * sizeof(sample_t)));
 
 	/* significant bits per sample */
-	put_16bitLE(buf + 0x22, sizeof(sample) * 8);
+	put_16bitLE(buf + 0x22, sizeof(sample_t) * 8);
 
 	/* PCM has no extra format bytes, so we don't even need to specify a count */
 
@@ -169,7 +217,7 @@ void make_smpl_header(uint8_t* buf, int32_t loop_start, int32_t loop_end)
 int Convert(VGMSTREAM* vgmstream, unsigned char* outputdata)
 {
 	int result = 1; // 0 if there is no error
-	sample* buf = NULL;
+	sample_t* buf = NULL;
 	int32_t len;
 	const int BUFSIZE = 4000; // PCM sample size
 	int position = 0x2C; // Buffer seeking
@@ -181,7 +229,7 @@ int Convert(VGMSTREAM* vgmstream, unsigned char* outputdata)
 	}
 
 	// Allocate buffer
-	buf = malloc(BUFSIZE * sizeof(sample) * vgmstream->channels);
+	buf = malloc(BUFSIZE * sizeof(sample_t) * vgmstream->channels);
 	if (buf == NULL)
 		return 1;
 
@@ -201,8 +249,8 @@ int Convert(VGMSTREAM* vgmstream, unsigned char* outputdata)
 
 		render_vgmstream(buf, toget, vgmstream);
 		swap_samples_le(buf, vgmstream->channels * toget);
-		memcpy(&outputdata[position], buf, sizeof(sample) * vgmstream->channels * toget);
-		position += sizeof(sample) * vgmstream->channels * toget;
+		memcpy(&outputdata[position], buf, sizeof(sample_t) * vgmstream->channels * toget);
+		position += sizeof(sample_t) * vgmstream->channels * toget;
 	}
 
 	// Add loop header
@@ -235,7 +283,7 @@ BASS_VGMSTREAM_API int BASS_VGMSTREAM_GetVGMStreamOutputSize(void* vgmstream)
 	int numsample = get_vgmstream_play_samples(0, 0, 0, stream);
 	if (stream->loop_end_sample > numsample)
 		numsample += (stream->loop_end_sample - numsample);
-	return numsample * sizeof(sample) * stream->channels + 0x2C + (stream->loop_flag ? 0x44 : 0); // + WAV header + possibly smpl header for 1 loop
+	return numsample * sizeof(sample_t) * stream->channels + 0x2C + (stream->loop_flag ? 0x44 : 0); // + WAV header + possibly smpl header for 1 loop
 }
 
 BASS_VGMSTREAM_API int BASS_VGMSTREAM_ConvertVGMStreamToWav(void* vgmstream, unsigned char* outputdata)

@@ -34,7 +34,7 @@ DWORD CALLBACK vgmStreamProc(
 {
 	VGMSTREAM* stream = (VGMSTREAM*)user;                         // We passed the VGMSTREAM as user data.
 	BOOL ended = FALSE;                                           // Used to signal end of stream.
-	int max_samples = length / sizeof(sample) / stream->channels; // Calculate the maximum amount of samples from max buffer size.
+	int max_samples = length / sizeof(sample_t) / stream->channels; // Calculate the maximum amount of samples from max buffer size.
 	int samples_to_do;                                            // Will hold the amount of samples to be copied.
 	
 	// If this is a looping VGM stream, we handle it as an infinite stream and read out the
@@ -50,9 +50,9 @@ DWORD CALLBACK vgmStreamProc(
 		samples_to_do = max_samples;
 
 	// Render the stream.
-	render_vgmstream((sample*)buffer, samples_to_do, stream);
+	render_vgmstream((sample_t*)buffer, samples_to_do, stream);
 	// BASS expects you to return the amount of data read in bytes, so multiply by the sample size
-	samples_to_do *= sizeof(sample) * stream->channels;
+	samples_to_do *= sizeof(sample_t) * stream->channels;
 
 	// If we reached the end of a non-looping VGM stream, we'll check BASS' loop flag.
 	// If it is set, we restart from the beginning. Otherwise, we signal the end of stream
